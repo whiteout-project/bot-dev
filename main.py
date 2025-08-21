@@ -620,20 +620,21 @@ if __name__ == "__main__":
             latest_tag = release_info["tag_name"]
             source_name = release_info["source"]
             
-            # For beta mode, always show as update available
-            if beta_mode:
-                print(F.YELLOW + f"Beta mode: Pulling latest from main branch" + R)
-                current_version = "beta-mode"  # Force update in beta mode
-            elif repair_mode:
+            # Check current version
+            if repair_mode:
                 print(F.YELLOW + f"Repair mode: Forcing reinstall from {latest_tag}" + R)
                 current_version = "repair-mode"  # Force update in repair mode
             elif os.path.exists("version"):
                 with open("version", "r") as f:
                     current_version = f.read().strip()
+                if beta_mode:
+                    print(F.YELLOW + f"Beta mode: Checking latest from main branch" + R)
             else:
                 current_version = "v0.0.0"
+                if beta_mode:
+                    print(F.YELLOW + f"Beta mode: Checking latest from main branch" + R)
             
-            if not beta_mode and not repair_mode:
+            if not repair_mode:
                 print(F.CYAN + f"Current version: {current_version}" + R)
 
             if current_version != latest_tag or repair_mode:
