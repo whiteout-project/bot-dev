@@ -281,7 +281,7 @@ def cleanup_legacy_packages():
 UPDATE_SOURCES = [
     {
         "name": "GitHub",
-        "api_url": "https://api.github.com/repos/whiteout-project/bot/releases/latest",
+        "api_url": "https://api.github.com/repos/whiteout-project/bot-dev/releases/latest",
         "primary": True
     },
     {
