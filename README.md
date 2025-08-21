@@ -1,4 +1,4 @@
-# Whiteout Survival Discord Bot
+# DEV REPO - DO NOT USE
 
 Whiteout Survival Discord Bot that supports alliance management, event reminders and attendance tracking, gift code redemption, minister appointment planning and more. This bot is free, open source and self-hosted.
 
