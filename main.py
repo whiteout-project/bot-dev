@@ -44,8 +44,6 @@ if sys.prefix == sys.base_prefix and not should_skip_venv():
                 print("To continue, please run the script again with the venv Python:")
                 print(f"  1. Ensure CMD or PowerShell is open in this directory: {os.getcwd()}")
                 print(f"  2. Run this exact command: {venv_python_name} {os.path.basename(sys.argv[0])}")
-                print(f"  1. Ensure CMD or PowerShell is open in this directory: {os.getcwd()}")
-                print(f"  2. Run this exact command: {venv_python_name} {os.path.basename(sys.argv[0])}")
                 sys.exit(0)
             else: # For non-Windows, try to relaunch automatically
                 print("Restarting script in virtual environment...")
@@ -63,8 +61,6 @@ if sys.prefix == sys.base_prefix and not should_skip_venv():
         if sys.platform == "win32":
             print(f"Virtual environment at {venv_path} exists.")
             print("To ensure you are using it, please run the script with the venv Python:")
-            print(f"  1. Ensure CMD or PowerShell is open in this directory: {os.getcwd()}")
-            print(f"  2. Run this exact command: {venv_python_name} {os.path.basename(sys.argv[0])}")
             print(f"  1. Ensure CMD or PowerShell is open in this directory: {os.getcwd()}")
             print(f"  2. Run this exact command: {venv_python_name} {os.path.basename(sys.argv[0])}")
             sys.exit(0)
