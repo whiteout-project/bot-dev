@@ -358,7 +358,7 @@ def get_latest_release_info(beta_mode=False):
 def download_requirements_from_release():
     """
     Download requirements.txt file directly from the latest release.
-    Needed for legacy installation upgrades when replacing main.py.
+    Needed for legacy installation upgrades.
     """
     if os.path.exists("requirements.txt"):
         return True
