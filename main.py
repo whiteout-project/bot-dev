@@ -411,7 +411,7 @@ def check_and_install_requirements():
     with open("requirements.txt", "r") as f:
         requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
     
-    print_status(f"{len(requirements)} requirements found", "arrow", indent=1)
+    print(f"  → {len(requirements)} requirements found")
     
     missing_packages = []
     
@@ -442,36 +442,36 @@ def check_and_install_requirements():
             missing_packages.append(requirement)
     
     if missing_packages:
-        print_status(f"{len(missing_packages)} packages missing", "warning", indent=1)
-        print_status("Installing missing packages...", "arrow", indent=1)
+        print(f"  ! {len(missing_packages)} packages missing")
+        print("  → Installing missing packages...")
         
         for package in missing_packages:
             try:
                 cmd = [sys.executable, "-m", "pip", "install", package, "--no-cache-dir"]
                 
                 subprocess.check_call(cmd, timeout=1200, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print_status(f"Installed {package}", "success", indent=2)
+                print(f"    ✓ Installed {package}")
                 
             except Exception as e:
-                print_status(f"Failed to install {package}: {e}", "error", indent=2)
+                print(f"    ✗ Failed to install {package}: {e}")
                 return False
     
-    print_status("All requirements satisfied", "success", indent=1)
+    print("  ✓ All requirements satisfied")
     return True
 
 def setup_dependencies():
     """Main function to set up all dependencies."""
-    print("\n" + F.CYAN + "• Checking dependencies..." + R)
+    print("\nChecking dependencies...")
     
     if not os.path.exists("requirements.txt"):
-        print_status("requirements.txt not found", "warning", indent=1)
+        print("  ! Warning: requirements.txt not found")
         if not download_requirements_from_release():
-            print_status("Failed to download requirements.txt", "error", indent=1)
-            print_status("Please get the requirements.txt file from the latest release: https://github.com/whiteout-project/bot/releases", "info", indent=1)
+            print("  ✗ Failed to download requirements.txt")
+            print("  • Please download the complete bot package from: https://github.com/whiteout-project/bot/releases")
             return False
 
     if not check_and_install_requirements():
-        print_status("Failed to install requirements", "error", indent=1)
+        print("  ✗ Failed to install requirements")
         return False
     
     return True
