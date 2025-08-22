@@ -286,7 +286,6 @@ UPDATE_SOURCES = [
         "project_id": 1,
         "primary": False
     }
-    # Can add more sources here as needed
 ]
 
 def get_latest_release_info(beta_mode=False):
@@ -337,8 +336,6 @@ def get_latest_release_info(beta_mode=False):
                             "download_url": download_url,
                             "source": source['name']
                         }
-            
-            # Add handling for other sources here
             
         except requests.exceptions.RequestException as e:
             if hasattr(e, 'response') and e.response is not None:
@@ -988,7 +985,7 @@ if __name__ == "__main__":
     async def load_cogs():
         cogs = ["olddb", "control", "alliance", "alliance_member_operations", "bot_operations", "logsystem", "support_operations", "gift_operations", "changes", "w", "wel", "other_features", "bear_trap", "id_channel", "backup_operations", "bear_trap_editor", "attendance", "attendance_report", "minister_schedule", "minister_menu"]
         
-        print("\n" + F.CYAN + "• Loading extensions..." + R)
+        print("\n" + F.CYAN + "• Loading cogs..." + R)
         
         failed_cogs = []
         loaded_cogs = []
@@ -1000,13 +997,10 @@ if __name__ == "__main__":
             except Exception as e:
                 failed_cogs.append((cog, str(e)))
         
-        # Show successful loads in a compact way
         if loaded_cogs:
-            print_status(f"{len(loaded_cogs)} extensions loaded successfully", "success", indent=1)
-        
-        # Show failures with details
+            print_status(f"{len(loaded_cogs)} cogs loaded successfully", "success", indent=1)
         if failed_cogs:
-            print_status(f"{len(failed_cogs)} extension(s) failed to load:", "error", indent=1)
+            print_status(f"{len(failed_cogs)} cog(s) failed to load:", "error", indent=1)
             for cog, error in failed_cogs:
                 print_status(f"{cog}: {error[:60]}...", "arrow", indent=2)
             print()
