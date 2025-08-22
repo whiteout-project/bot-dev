@@ -187,14 +187,13 @@ def cleanup_removed_packages():
     """Uninstall packages that were removed from requirements"""
     # If no requirements.old exists, this might be an upgrade from legacy version
     if not os.path.exists("requirements.old"):
-        print(F.YELLOW + "No requirements.old found - checking for legacy packages..." + R)
         cleanup_legacy_packages()
         return
     
     removed = get_removed_packages()
     
     if removed:
-        print(F.YELLOW + f"Found {len(removed)} packages removed from requirements: {', '.join(removed)}" + R)
+        print_status(f"Found {len(removed)} packages removed from requirements: {', '.join(removed)}", "warning", indent=1)
         
         debug_mode = "--verbose" in sys.argv or "--debug" in sys.argv
         
@@ -206,11 +205,11 @@ def cleanup_removed_packages():
                     subprocess.check_call(cmd, timeout=300)
                 else:
                     subprocess.check_call(cmd, timeout=300, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print(F.GREEN + f"✓ Removed {package}" + R)
+                print_status(f"Removed {package}", "success", indent=2)
             except subprocess.CalledProcessError:
-                print(F.YELLOW + f"✗ Could not remove {package} (might be needed by other packages)" + R)
+                print_status(f"Could not remove {package} (might be needed by other packages)", "warning", indent=2)
             except Exception as e:
-                print(F.YELLOW + f"✗ Error removing {package}: {e}" + R)
+                print_status(f"Error removing {package}: {e}", "error", indent=2)
     
     try:
         if os.path.exists("requirements.old"):
@@ -244,13 +243,19 @@ def is_package_installed(package_name):
 
 def cleanup_legacy_packages():
     """Remove known obsolete packages from older bot versions"""
-    print(F.YELLOW + "Checking for legacy packages to remove..." + R)
-    
     debug_mode = "--verbose" in sys.argv or "--debug" in sys.argv
     removed_count = 0
+    found_packages = []
     
     for package in LEGACY_PACKAGES_TO_REMOVE:
         if is_package_installed(package):
+            found_packages.append(package)
+    
+    if found_packages:
+        print_status(f"Legacy packages found: {', '.join(found_packages)}", "warning", indent=1)
+        print_status("Removing legacy packages...", "arrow", indent=1)
+        
+        for package in found_packages:
             try:
                 cmd = [sys.executable, "-m", "pip", "uninstall", "-y", package]
                 
@@ -259,12 +264,12 @@ def cleanup_legacy_packages():
                 else:
                     subprocess.check_call(cmd, timeout=300, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     
-                print(F.GREEN + f"✓ Removed legacy package: {package}" + R)
+                print_status(f"Removed {package}", "success", indent=2)
                 removed_count += 1
             except subprocess.CalledProcessError:
-                print(F.YELLOW + f"✗ Could not remove {package} (might be needed by other packages)" + R)
+                print_status(f"Could not remove {package} (might be needed by other packages)", "warning", indent=2)
             except Exception as e:
-                print(F.YELLOW + f"✗ Error removing {package}: {e}" + R)
+                print_status(f"Error removing {package}: {e}", "error", indent=2)
         
     return removed_count
 
@@ -288,8 +293,6 @@ def get_latest_release_info(beta_mode=False):
     """Try to get latest release info from multiple sources."""
     for source in UPDATE_SOURCES:
         try:
-            print(f"Checking for updates from {source['name']}...")
-            
             if source['name'] == "GitHub":
                 if beta_mode:
                     # Get latest commit from main branch
@@ -403,18 +406,15 @@ def download_requirements_from_release():
 def check_and_install_requirements():
     """Check each requirement and install missing ones."""
     if not os.path.exists("requirements.txt"):
-        print("No requirements.txt found")
         return False
         
-    # Read requirements
     with open("requirements.txt", "r") as f:
         requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
     
-    print(f"Checking {len(requirements)} requirements...")
+    print_status(f"{len(requirements)} requirements found", "arrow", indent=1)
     
     missing_packages = []
     
-    # Test each requirement
     for requirement in requirements:
         package_name = requirement.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].split("!=")[0]
         
@@ -439,44 +439,41 @@ def check_and_install_requirements():
                 __import__(package_name)
                         
         except ImportError:
-            print(f"✗ {package_name} - MISSING")
             missing_packages.append(requirement)
     
-    if missing_packages: # Install missing packages
-        print(f"Installing {len(missing_packages)} missing packages...")
+    if missing_packages:
+        print_status(f"{len(missing_packages)} packages missing", "warning", indent=1)
+        print_status("Installing missing packages...", "arrow", indent=1)
         
         for package in missing_packages:
             try:
                 cmd = [sys.executable, "-m", "pip", "install", package, "--no-cache-dir"]
                 
                 subprocess.check_call(cmd, timeout=1200, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print(f"✓ {package} installed successfully")
+                print_status(f"Installed {package}", "success", indent=2)
                 
             except Exception as e:
-                print(f"✗ Failed to install {package}: {e}")
+                print_status(f"Failed to install {package}: {e}", "error", indent=2)
                 return False
     
-    print("✓ All requirements satisfied")
+    print_status("All requirements satisfied", "success", indent=1)
     return True
 
 def setup_dependencies():
     """Main function to set up all dependencies."""
-    print("Starting dependency check...")
+    print("\n" + F.CYAN + "• Checking dependencies..." + R)
     
     if not os.path.exists("requirements.txt"):
-        print("Warning: requirements.txt not found.")
-        # Try to download for legacy installations
+        print_status("requirements.txt not found", "warning", indent=1)
         if not download_requirements_from_release():
-            print("Failed to download the requirements.txt file.")
-            print("Please get the requirements.txt file from the latest release: https://github.com/whiteout-project/bot/releases")
+            print_status("Failed to download requirements.txt", "error", indent=1)
+            print_status("Please get the requirements.txt file from the latest release: https://github.com/whiteout-project/bot/releases", "info", indent=1)
             return False
-    
-    # Check and install all requirements
+
     if not check_and_install_requirements():
-        print("Failed to install requirements")
+        print_status("Failed to install requirements", "error", indent=1)
         return False
     
-    print("Dependency check completed...")
     return True
 
 if not setup_dependencies():
@@ -486,7 +483,6 @@ if not setup_dependencies():
 try:
     from colorama import Fore, Style, init
     import discord
-    print("✓ All core imports successful")
 except ImportError as e:
     print(f"Import failed even after dependency setup: {e}")
     print("Please restart the script or install dependencies manually")
@@ -496,33 +492,67 @@ except ImportError as e:
 F = Fore
 R = Style.RESET_ALL
 
+def print_status(message, status="info", indent=0):
+    """Print formatted status messages"""
+    symbols = {
+        "success": (F.GREEN + "✓" + R, F.GREEN),
+        "error": (F.RED + "✗" + R, F.RED),
+        "warning": (F.YELLOW + "!" + R, F.YELLOW),
+        "info": (F.CYAN + "•" + R, F.CYAN),
+        "processing": ("...", ""),
+        "arrow": ("→", "")
+    }
+    
+    symbol, color = symbols.get(status, ("", ""))
+    prefix = "  " * indent + symbol + " " if symbol else "  " * indent
+    print(prefix + color + message + R if color else prefix + message)
+
 import warnings
 
 def startup_cleanup():
     """Perform all cleanup tasks on startup - directories, files, and legacy packages."""
+    cleanup_performed = False
+    
     v1_path = "V1oldbot"
     if os.path.exists(v1_path) and safe_remove(v1_path):
-        print(f"Removed directory: {v1_path}")
+        if not cleanup_performed:
+            print_status("System maintenance...", "info")
+            cleanup_performed = True
+        print_status(f"Removed old directory: {v1_path}", "arrow", indent=1)
     
     v2_path = "V2Old"
     if os.path.exists(v2_path) and safe_remove(v2_path):
-        print(f"Removed directory: {v2_path}")
+        if not cleanup_performed:
+            print_status("System maintenance...", "info")
+            cleanup_performed = True
+        print_status(f"Removed old directory: {v2_path}", "arrow", indent=1)
     
     pictures_path = "pictures"
     if os.path.exists(pictures_path) and safe_remove(pictures_path):
-        print(f"Removed directory: {pictures_path}")
+        if not cleanup_performed:
+            print_status("System maintenance...", "info")
+            cleanup_performed = True
+        print_status(f"Removed old directory: {pictures_path}", "arrow", indent=1)
     
     txt_path = "autoupdateinfo.txt"
     if os.path.exists(txt_path) and safe_remove(txt_path):
-        print(f"Removed file: {txt_path}")
+        if not cleanup_performed:
+            print_status("System maintenance...", "info")
+            cleanup_performed = True
+        print_status(f"Removed old file: {txt_path}", "arrow", indent=1)
     
-    cleanup_legacy_packages()
+    removed_count = cleanup_legacy_packages()
+    if removed_count > 0 and not cleanup_performed:
+        print_status("System maintenance...", "info")
 
 startup_cleanup()
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 init(autoreset=True)
+
+print("\n" + F.CYAN + "• Initializing bot environment..." + R)
+print_status("Core imports successful", "success", indent=1)
 
 try:
     import ssl
@@ -537,13 +567,13 @@ try:
        original_create_default_https_context is ssl.create_default_context:
         ssl._create_default_https_context = _create_ssl_context_with_certifi
         
-        print(F.GREEN + "Applied SSL context patch using certifi for default HTTPS connections." + R)
-    else: # Assume if it's already patched, it's for a good reason, just log it.
-        print(F.YELLOW + "SSL default HTTPS context seems to be already modified. Skipping certifi patch." + R)
+        print_status("SSL context patched", "success", indent=1)
+    else:
+        print_status("SSL context already modified", "warning", indent=1)
 except ImportError:
-    print(F.RED + "Certifi library not found. SSL certificate verification might fail until it's installed." + R)
+    print_status("Certifi library not found", "warning", indent=1)
 except Exception as e:
-    print(F.RED + f"Error applying SSL context patch: {e}" + R)
+    print_status(f"Error applying SSL context patch: {e}", "error", indent=1)
 
 if __name__ == "__main__":
     import requests
@@ -585,7 +615,6 @@ if __name__ == "__main__":
                 print(f"Error restarting: {e}")
                 os.execl(python, python, script_path, *sys.argv[1:])
             
-
     def install_packages(requirements_txt_path: str, debug: bool = False) -> bool:
         """Install packages from requirements.txt file using pip install -r."""
         full_command = [sys.executable, "-m", "pip", "install", "-r", requirements_txt_path, "--no-cache-dir"]
@@ -604,6 +633,9 @@ if __name__ == "__main__":
     async def check_and_update_files():
         beta_mode = "--beta" in sys.argv
         repair_mode = "--repair" in sys.argv
+        
+        print("\n" + F.CYAN + "• Checking for updates..." + R)
+        
         release_info = get_latest_release_info(beta_mode=beta_mode)
         
         if release_info:
@@ -612,28 +644,28 @@ if __name__ == "__main__":
             
             # Check current version
             if repair_mode:
-                print(F.YELLOW + f"Repair mode: Forcing reinstall from {latest_tag}" + R)
+                print_status(f"Repair mode: Forcing reinstall from {latest_tag}", "warning", indent=1)
                 current_version = "repair-mode"  # Force update in repair mode
             elif os.path.exists("version"):
                 with open("version", "r") as f:
                     current_version = f.read().strip()
                 if beta_mode:
-                    print(F.YELLOW + f"Beta mode: Comparing latest commit from main branch" + R)
+                    print_status("Beta mode active", "info", indent=1)
             else:
                 current_version = "v0.0.0"
                 if beta_mode:
-                    print(F.YELLOW + f"Beta mode: Comparing latest commit from main branch" + R)
+                    print_status("Beta mode active", "info", indent=1)
 
             if not repair_mode:
-                print(F.CYAN + f"Current version: {current_version}" + R)
+                print_status(f"Current version: {current_version}", "arrow", indent=1)
+                print_status(f"Latest version: {latest_tag}", "arrow", indent=1)
 
             if current_version != latest_tag or repair_mode:
                 if repair_mode:
-                    print(F.YELLOW + f"Repairing installation using: {latest_tag} (from {source_name})" + R)
-                    print("This will overwrite existing files and restore any missing components.")
+                    print_status(f"Repairing installation from {source_name}", "warning", indent=1)
                 else:
-                    print(F.YELLOW + f"New version available: {latest_tag} (from {source_name})" + R)
-                    print("Update Notes:")
+                    print_status("Update available!", "warning", indent=1)
+                    print("\n" + F.CYAN + "Update Notes:" + R)
                     print(release_info["body"])
                 print()
                 
@@ -647,7 +679,7 @@ if __name__ == "__main__":
                         ask = input("Do you want to update? (y/n): ").strip().lower()
                         update = ask == "y"
                 else:
-                    print(F.YELLOW + "Running in a container. Skipping update prompt." + R)
+                    print_status("Running in a container. Skipping update prompt.", "info", indent=1)
                     update = True
                     
                 if update:
@@ -659,7 +691,7 @@ if __name__ == "__main__":
                             print(F.YELLOW + f"Could not backup requirements.txt: {e}" + R)
                     
                     if os.path.exists("db") and os.path.isdir("db"):
-                        print(F.YELLOW + "Making backup of database..." + R)
+                        print_status("Making backup of database...", "info", indent=1)
                         
                         db_bak_path = "db.bak"
                         if os.path.exists(db_bak_path) and os.path.isdir(db_bak_path):
@@ -669,7 +701,7 @@ if __name__ == "__main__":
 
                         try:
                             shutil.copytree("db", db_bak_path)
-                            print(F.GREEN + f"Backup completed: db → {db_bak_path}" + R)
+                            print_status(f"Backup completed: db → {db_bak_path}", "success", indent=2)
                         except Exception as e:
                             print(F.RED + f"WARNING: Failed to create database backup: {e}" + R)
                                             
@@ -678,7 +710,7 @@ if __name__ == "__main__":
                         print(F.RED + "No download URL available for this release" + R)
                         return
                         
-                    print(F.YELLOW + f"Downloading update from {source_name}..." + R)
+                    print_status(f"Downloading update from {source_name}...", "info", indent=1)
                     safe_remove("package.zip")
                     download_resp = requests.get(download_url, timeout=600)
                     
@@ -810,14 +842,16 @@ if __name__ == "__main__":
                         with open("version", "w") as f:
                             f.write(latest_tag)
                         
-                        print(F.GREEN + f"Update completed successfully from {source_name}." + R)
+                        print_status(f"Update completed successfully from {source_name}", "success", indent=1)
                         
                         restart_bot()
                     else:
                         print(F.RED + f"Failed to download the update from {source_name}. HTTP status: {download_resp.status_code}" + R)
-                        return  
+                        return
+            else:
+                print_status("Bot is up to date", "success", indent=1)
         else:
-            print(F.RED + "Failed to fetch latest release info from all sources" + R)
+            print_status("Failed to fetch latest release info from all sources", "error", indent=1)
         
     import asyncio
     from datetime import datetime
@@ -826,7 +860,8 @@ if __name__ == "__main__":
     if "--repair" in sys.argv:
         asyncio.run(check_and_update_files())
     elif "--no-update" in sys.argv:
-        print(F.YELLOW + "Update check skipped due to --no-update flag." + R)
+        print("\n" + F.CYAN + "• Checking for updates..." + R)
+        print_status("Update check skipped (--no-update flag)", "info", indent=1)
     else:
         asyncio.run(check_and_update_files())
             
@@ -866,8 +901,6 @@ if __name__ == "__main__":
 
     if not os.path.exists("db"):
         os.makedirs("db")
-        
-        print(F.GREEN + "db folder created" + R)
 
     databases = {
         "conn_alliance": "db/alliance.sqlite",
@@ -878,8 +911,9 @@ if __name__ == "__main__":
     }
 
     connections = {name: sqlite3.connect(path) for name, path in databases.items()}
-
-    print(F.GREEN + "Database connections have been successfully established." + R)
+    
+    print("\n" + F.CYAN + "• Initializing database..." + R)
+    print_status("Database connections established", "success", indent=1)
 
     def create_tables():
         with connections["conn_changes"] as conn_changes:
@@ -947,37 +981,46 @@ if __name__ == "__main__":
                 name TEXT
             )""")
 
-        print(F.GREEN + "All tables checked." + R)
+        print_status("All tables verified", "success", indent=1)
 
     create_tables()
 
     async def load_cogs():
         cogs = ["olddb", "control", "alliance", "alliance_member_operations", "bot_operations", "logsystem", "support_operations", "gift_operations", "changes", "w", "wel", "other_features", "bear_trap", "id_channel", "backup_operations", "bear_trap_editor", "attendance", "attendance_report", "minister_schedule", "minister_menu"]
         
+        print("\n" + F.CYAN + "• Loading extensions..." + R)
+        
         failed_cogs = []
+        loaded_cogs = []
         
         for cog in cogs:
             try:
                 await bot.load_extension(f"cogs.{cog}")
+                loaded_cogs.append(cog)
             except Exception as e:
-                print(f"✗ Failed to load cog {cog}: {e}")
-                failed_cogs.append(cog)
+                failed_cogs.append((cog, str(e)))
         
+        # Show successful loads in a compact way
+        if loaded_cogs:
+            print_status(f"{len(loaded_cogs)} extensions loaded successfully", "success", indent=1)
+        
+        # Show failures with details
         if failed_cogs:
-            print(F.RED + f"\n⚠️  {len(failed_cogs)} cog(s) failed to load:" + R)
-            for cog in failed_cogs:
-                print(F.YELLOW + f"   • {cog}" + R)
-            print(F.YELLOW + "\nThe bot will continue with reduced functionality." + R)
-            print(F.YELLOW + "To fix missing or corrupted files, run: " + F.GREEN + "python main.py --repair" + R)
-            print(F.YELLOW + "This will download and restore all files from the latest release.\n" + R)
+            print_status(f"{len(failed_cogs)} extension(s) failed to load:", "error", indent=1)
+            for cog, error in failed_cogs:
+                print_status(f"{cog}: {error[:60]}...", "arrow", indent=2)
+            print()
+            print_status("Bot will continue with reduced functionality", "warning", indent=1)
+            print_status("To fix missing or corrupted files, run: python main.py --repair", "info", indent=1)
 
     @bot.event
     async def on_ready():
         try:
-            print(f"{F.GREEN}Logged in as {F.CYAN}{bot.user}{R}")
+            print("\n" + F.GREEN + "✓ Bot initialized successfully" + R)
+            print_status(f"Logged in as: {bot.user}", "info")
             await bot.tree.sync()
         except Exception as e:
-            print(f"Error syncing commands: {e}")
+            print_status(f"Error syncing commands: {e}", "error")
 
     async def main():
         await load_cogs()
