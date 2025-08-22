@@ -562,8 +562,8 @@ if __name__ == "__main__":
     def restart_bot():
         python = sys.executable
         script_path = os.path.abspath(sys.argv[0])
-        # Filter out --no-venv from restart args to avoid loops
-        filtered_args = [arg for arg in sys.argv[1:] if arg != "--no-venv"]
+        # Filter out --no-venv and --repair from restart args to avoid loops
+        filtered_args = [arg for arg in sys.argv[1:] if arg not in ["--no-venv", "--repair"]]
         args = [python, script_path] + filtered_args
 
         if sys.platform == "win32":
