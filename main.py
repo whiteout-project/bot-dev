@@ -525,11 +525,10 @@ if __name__ == "__main__":
             # For Windows, provide direct venv command like initial setup
             print(F.YELLOW + "Please restart the bot manually to continue:" + R)
             print(F.CYAN + f"  1. Ensure CMD or PowerShell is open in this directory: {os.getcwd()}" + R)
-            print(F.CYAN + f"  1. Ensure CMD or PowerShell is open in this directory: {os.getcwd()}" + R)
             
             venv_path = "bot_venv"
             venv_python_name = os.path.join(venv_path, "Scripts", "python.exe")
-            print(F.CYAN + "  2. Run this exact command this exact command: " + F.GREEN + f"{venv_python_name} {os.path.basename(script_path)}" + R)
+            print(F.CYAN + "  2. Run this exact command: " + F.GREEN + f"{venv_python_name} {os.path.basename(script_path)}" + R)
             sys.exit(0)
         else:
             # For non-Windows, try automatic restart
@@ -568,15 +567,11 @@ if __name__ == "__main__":
             
             # Check current version
             if repair_mode:
-            # Check current version
-            if repair_mode:
                 print(F.YELLOW + f"Repair mode: Forcing reinstall from {latest_tag}" + R)
                 current_version = "repair-mode"  # Force update in repair mode
             elif os.path.exists("version"):
                 with open("version", "r") as f:
                     current_version = f.read().strip()
-                if beta_mode:
-                    print(F.YELLOW + f"Beta mode: Comparing latest commit from main branch" + R)
                 if beta_mode:
                     print(F.YELLOW + f"Beta mode: Comparing latest commit from main branch" + R)
             else:
