@@ -469,22 +469,22 @@ def setup_dependencies(beta_mode=False):
     print("\nChecking dependencies...")
     
     if not os.path.exists("requirements.txt"):
-        print("  ! Warning: requirements.txt not found")
+        print("! Warning: requirements.txt not found")
         if not download_requirements_from_release(beta_mode=beta_mode):
-            print("  ✗ Failed to download requirements.txt")
-            print("  • Please download the complete bot package from: https://github.com/whiteout-project/bot/releases")
+            print("✗ Failed to download requirements.txt")
+            print("Please download the complete bot package from: https://github.com/whiteout-project/bot/releases")
             return False
     
     if not check_and_install_requirements():
-        print("  ✗ Failed to install requirements")
+        print("✗ Failed to install requirements")
         return False
     
     return True
 
 beta_mode = "--beta" in sys.argv
 if not setup_dependencies(beta_mode=beta_mode):
-    print("Warning: Dependency setup incomplete. The bot will attempt to update which may resolve this.")
-    print("If update fails, please install manually with: pip install -r requirements.txt")
+    print("Warning: Dependency setup incomplete. Please update if prompted or run --repair to try fixing this.")
+    print("If update or repair fails, please install manually with: pip install -r requirements.txt")
 
 try:
     from colorama import Fore, Style, init
