@@ -355,10 +355,9 @@ def get_latest_release_info(beta_mode=False):
     print("All update sources failed")
     return None
 
-def download_requirements_from_release():
+def download_requirements_from_release(beta_mode=False):
     """
-    Download requirements.txt file directly from the latest release.
-    Needed for legacy installation upgrades.
+    Download requirements.txt file directly from the latest release or main branch if beta mode.
     """
     if os.path.exists("requirements.txt"):
         return True
@@ -366,7 +365,7 @@ def download_requirements_from_release():
     print("requirements.txt not found. Downloading from latest release...")
     
     # Get latest release info to find the tag
-    release_info = get_latest_release_info()
+    release_info = get_latest_release_info(beta_mode=beta_mode)
     if not release_info:
         print("Could not get release information")
         return False
@@ -374,11 +373,17 @@ def download_requirements_from_release():
     tag = release_info["tag_name"]
     source_name = release_info.get("source", "Unknown")
     
-    # Build raw URL based on source
-    if source_name == "GitHub":
-        raw_url = f"https://raw.githubusercontent.com/whiteout-project/bot-dev/refs/tags/{tag}/requirements.txt"
+    # Build raw URL based on source and mode
+    if source_name == "GitHub" or "GitHub" in source_name:
+        if beta_mode:
+            raw_url = f"https://raw.githubusercontent.com/whiteout-project/bot-dev/main/requirements.txt"
+        else:
+            raw_url = f"https://raw.githubusercontent.com/whiteout-project/bot-dev/refs/tags/{tag}/requirements.txt"
     elif source_name == "GitLab":
-        raw_url = f"https://gitlab.whiteout-bot.com/whiteout-project/bot/-/raw/{tag}/requirements.txt"
+        if beta_mode:
+            raw_url = f"https://gitlab.whiteout-bot.com/whiteout-project/bot/-/raw/main/requirements.txt"
+        else:
+            raw_url = f"https://gitlab.whiteout-bot.com/whiteout-project/bot/-/raw/{tag}/requirements.txt"
     else:
         print(f"Unknown source: {source_name}")
         return False
@@ -459,29 +464,27 @@ def check_and_install_requirements():
     print("✓ All requirements satisfied")
     return True
 
-def setup_dependencies():
+def setup_dependencies(beta_mode=False):
     """Main function to set up all dependencies."""
-    print("Starting dependency check...")
+    print("\nChecking dependencies...")
     
     if not os.path.exists("requirements.txt"):
-        print("Warning: requirements.txt not found.")
-        # Try to download for legacy installations
-        if not download_requirements_from_release():
-            print("Failed to download the requirements.txt file.")
-            print("Please get the requirements.txt file from the latest release: https://github.com/whiteout-project/bot/releases")
+        print("  ! Warning: requirements.txt not found")
+        if not download_requirements_from_release(beta_mode=beta_mode):
+            print("  ✗ Failed to download requirements.txt")
+            print("  • Please download the complete bot package from: https://github.com/whiteout-project/bot/releases")
             return False
     
-    # Check and install all requirements
     if not check_and_install_requirements():
-        print("Failed to install requirements")
+        print("  ✗ Failed to install requirements")
         return False
     
-    print("Dependency check completed...")
     return True
 
-if not setup_dependencies():
-    print("Dependency setup failed. Please install manually with: pip install -r requirements.txt")
-    sys.exit(1)
+beta_mode = "--beta" in sys.argv
+if not setup_dependencies(beta_mode=beta_mode):
+    print("Warning: Dependency setup incomplete. The bot will attempt to update which may resolve this.")
+    print("If update fails, please install manually with: pip install -r requirements.txt")
 
 try:
     from colorama import Fore, Style, init
@@ -585,7 +588,6 @@ if __name__ == "__main__":
                 print(f"Error restarting: {e}")
                 os.execl(python, python, script_path, *sys.argv[1:])
             
-
     def install_packages(requirements_txt_path: str, debug: bool = False) -> bool:
         """Install packages from requirements.txt file using pip install -r."""
         full_command = [sys.executable, "-m", "pip", "install", "-r", requirements_txt_path, "--no-cache-dir"]
