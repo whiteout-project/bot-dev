@@ -999,6 +999,43 @@ if __name__ == "__main__":
         
         if loaded_cogs:
             print_status(f"{len(loaded_cogs)} cogs loaded successfully", "success", indent=1)
+            
+            status_messages = []
+            
+            # Check Login Handler status
+            if 'control' in loaded_cogs:
+                try:
+                    control_cog = bot.get_cog('Control')
+                    if control_cog and hasattr(control_cog, 'login_handler'):
+                        mode_text = control_cog.login_handler.get_mode_text()
+                        if "Dual-API" in mode_text:
+                            status_messages.append("✓ Login Handler in Dual-API mode")
+                        else:
+                            status_messages.append("⚠ Login Handler in Single-API mode")
+                    else:
+                        status_messages.append("✗ Login Handler not initialized")
+                except:
+                    pass
+            
+            # Check Alliance Control status
+            if 'control' in loaded_cogs:
+                status_messages.append("✓ Alliance Control monitoring active")
+            
+            # Check Gift Code Redeemer status
+            if 'gift_operations' in loaded_cogs:
+                try:
+                    gift_cog = bot.get_cog('GiftOperations')
+                    if gift_cog and hasattr(gift_cog, 'captcha_solver') and gift_cog.captcha_solver and gift_cog.captcha_solver.is_initialized:
+                        status_messages.append("✓ Gift Code Redeemer (OCR) ready")
+                    else:
+                        status_messages.append("✗ Gift Code Redeemer (OCR) not initialized")
+                except:
+                    pass
+
+            if status_messages:
+                for msg in status_messages:
+                    print_status(msg, "arrow", indent=1)
+                    
         if failed_cogs:
             print_status(f"{len(failed_cogs)} cog(s) failed to load:", "error", indent=1)
             for cog, error in failed_cogs:

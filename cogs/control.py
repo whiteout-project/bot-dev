@@ -427,20 +427,22 @@ class Control(commands.Cog):
                     
                 except Exception as e:
                     print(f"[ERROR] Error in schedule_alliance_check for alliance {alliance_id}: {e}")
+                    self.logger.error(f"Error in schedule_alliance_check for alliance {alliance_id}: {e}")
                     await asyncio.sleep(60)
                     
         except Exception as e:
             print(f"[ERROR] Fatal error in schedule_alliance_check for alliance {alliance_id}: {e}")
+            self.logger.error(f"Fatal error in schedule_alliance_check for alliance {alliance_id}: {e}")
             traceback.print_exc()
 
     @commands.Cog.listener()
     async def on_ready(self):
         if not self.monitor_started:
-            print("[CONTROL] Starting monitor...")
+            self.logger.info("Starting monitor...")
             
             # Check API availability
             await self.login_handler.check_apis_availability()
-            print(f"[CONTROL] {self.login_handler.get_mode_text()}")
+            self.logger.info(self.login_handler.get_mode_text())
             
             # Start the centralized queue processor
             await self.login_handler.start_queue_processor()
@@ -467,15 +469,15 @@ class Control(commands.Cog):
                 alliances = self.cursor_alliance.fetchall()
 
                 if not alliances:
-                    print("[CONTROL] No alliances with intervals found")
+                    self.logger.info("No alliances with intervals found")
                     return
 
-                print(f"[CONTROL] Found {len(alliances)} alliances with intervals")
+                self.logger.info(f"Found {len(alliances)} alliances with intervals")
                 
                 for alliance_id, channel_id, interval in alliances:
                     channel = self.bot.get_channel(channel_id)
                     if channel is not None:
-                        print(f"[CONTROL] Scheduling alliance {alliance_id} with interval {interval} minutes")
+                        self.logger.info(f"Scheduling alliance {alliance_id} with interval {interval} minutes")
                         
                         # Don't queue an immediate check - let the schedule handle it
                         self.is_running[alliance_id] = True
@@ -489,15 +491,20 @@ class Control(commands.Cog):
 
         except Exception as e:
             print(f"[ERROR] Error in start_alliance_checks: {e}")
+            self.logger.error(f"Error in start_alliance_checks: {e}")
             traceback.print_exc()
 
     async def cog_load(self):
         try:
-            print("[MONITOR] Cog loaded successfully")
+            if not hasattr(self, 'conn_alliance') or not self.conn_alliance:
+                raise RuntimeError("Alliance database connection not initialized")
+            if not hasattr(self, 'login_handler') or not self.login_handler:
+                raise RuntimeError("Login handler not initialized")
         except Exception as e:
             print(f"[ERROR] Error in cog_load: {e}")
             import traceback
             print(traceback.format_exc())
+            raise
 
     @tasks.loop(minutes=1)
     async def monitor_alliance_changes(self):
@@ -538,6 +545,7 @@ class Control(commands.Cog):
 
         except Exception as e:
             print(f"[ERROR] Error in monitor_alliance_changes: {e}")
+            self.logger.error(f"Error in monitor_alliance_changes: {e}")
             import traceback
             print(traceback.format_exc())
 
