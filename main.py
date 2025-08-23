@@ -538,8 +538,7 @@ def startup_cleanup():
             legacy_packages.append(package.lower())
     
     if legacy_packages:
-        print(F.YELLOW + "Found legacy packages on startup..." + R)
-        uninstall_packages(legacy_packages, " (legacy cleanup)")
+        uninstall_packages(legacy_packages, " (legacy packages)")
 
 startup_cleanup()
 
