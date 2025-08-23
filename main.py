@@ -153,70 +153,76 @@ def calculate_file_hash(filepath):
     except Exception:
         return None
 
-def get_removed_packages():
-    """Compare old and new requirements to find removed packages"""
-    if not os.path.exists("requirements.old") or not os.path.exists("requirements.txt"):
-        return []
-    
-    old_packages = set()
-    new_packages = set()
-    
-    try:
-        # Parse old requirements
-        with open("requirements.old", "r") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    pkg_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].split("!=")[0]
-                    old_packages.add(pkg_name.strip().lower())
-        
-        # Parse new requirements
-        with open("requirements.txt", "r") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    pkg_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].split("!=")[0]
-                    new_packages.add(pkg_name.strip().lower())
-        
-        return list(old_packages - new_packages)
-    except Exception as e:
-        print(F.YELLOW + f"Error comparing requirements: {e}" + R)
-        return []
-
-def cleanup_removed_packages():
-    """Uninstall packages that were removed from requirements"""
-    # If no requirements.old exists, this might be an upgrade from legacy version
-    if not os.path.exists("requirements.old"):
-        print(F.YELLOW + "No requirements.old found - checking for legacy packages..." + R)
-        cleanup_legacy_packages()
+def uninstall_packages(packages, reason=""):
+    """Generic function to uninstall a list of packages"""
+    if not packages:
         return
     
-    removed = get_removed_packages()
+    print(F.YELLOW + f"Found {len(packages)} packages to remove{reason}: {', '.join(packages)}" + R)
+    debug_mode = "--verbose" in sys.argv or "--debug" in sys.argv
     
-    if removed:
-        print(F.YELLOW + f"Found {len(removed)} packages removed from requirements: {', '.join(removed)}" + R)
-        
-        debug_mode = "--verbose" in sys.argv or "--debug" in sys.argv
-        
-        for package in removed:
-            try:
-                cmd = [sys.executable, "-m", "pip", "uninstall", "-y", package]
-                
-                if debug_mode:
-                    subprocess.check_call(cmd, timeout=300)
-                else:
-                    subprocess.check_call(cmd, timeout=300, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print(F.GREEN + f"✓ Removed {package}" + R)
-            except subprocess.CalledProcessError:
-                print(F.YELLOW + f"✗ Could not remove {package} (might be needed by other packages)" + R)
-            except Exception as e:
-                print(F.YELLOW + f"✗ Error removing {package}: {e}" + R)
+    for package in packages:
+        try:
+            cmd = [sys.executable, "-m", "pip", "uninstall", "-y", package]
+            
+            if debug_mode:
+                subprocess.check_call(cmd, timeout=300)
+            else:
+                subprocess.check_call(cmd, timeout=300, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(F.GREEN + f"✓ Removed {package}" + R)
+        except subprocess.CalledProcessError:
+            print(F.YELLOW + f"✗ Could not remove {package} (might be needed by other packages)" + R)
+        except Exception as e:
+            print(F.YELLOW + f"✗ Error removing {package}: {e}" + R)
+
+def get_packages_to_remove():
+    """Get all packages that should be removed (from requirements comparison + legacy)"""
+    packages_to_remove = set()
     
-    try:
-        if os.path.exists("requirements.old"):
-            os.remove("requirements.old")
-    except:
-        pass
+    # Check requirements.old vs requirements.txt (if they exist)
+    if os.path.exists("requirements.old") and os.path.exists("requirements.txt"):
+        try:
+            old_packages = set()
+            new_packages = set()
+            
+            # Parse old requirements
+            with open("requirements.old", "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        pkg_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].split("!=")[0]
+                        old_packages.add(pkg_name.strip().lower())
+            
+            # Parse new requirements
+            with open("requirements.txt", "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        pkg_name = line.split("==")[0].split(">=")[0].split("<=")[0].split("~=")[0].split("!=")[0]
+                        new_packages.add(pkg_name.strip().lower())
+            
+            packages_to_remove.update(old_packages - new_packages)
+        except Exception as e:
+            print(F.YELLOW + f"Error comparing requirements: {e}" + R)
+    
+    # Always check for legacy packages that are still installed
+    for package in LEGACY_PACKAGES_TO_REMOVE:
+        if is_package_installed(package):
+            packages_to_remove.add(package.lower())
+    
+    return list(packages_to_remove)
+
+def cleanup_removed_packages():
+    """Main cleanup function - removes obsolete packages"""
+    packages = get_packages_to_remove()
+    
+    if packages:
+        reason = " from requirements" if os.path.exists("requirements.old") else " (legacy packages)"
+        uninstall_packages(packages, reason)
+    
+    # Clean up requirements.old
+    if os.path.exists("requirements.old"):
+        safe_remove("requirements.old", is_dir=False)
 
 # Potential leftovers from older bot versions
 LEGACY_PACKAGES_TO_REMOVE = [
@@ -264,31 +270,6 @@ def is_package_installed(package_name):
     except Exception:
         return False
 
-def cleanup_legacy_packages():
-    """Remove known obsolete packages from older bot versions"""
-    print(F.YELLOW + "Checking for legacy packages to remove..." + R)
-    
-    debug_mode = "--verbose" in sys.argv or "--debug" in sys.argv
-    removed_count = 0
-    
-    for package in LEGACY_PACKAGES_TO_REMOVE:
-        if is_package_installed(package):
-            try:
-                cmd = [sys.executable, "-m", "pip", "uninstall", "-y", package]
-                
-                if debug_mode:
-                    subprocess.check_call(cmd, timeout=300)
-                else:
-                    subprocess.check_call(cmd, timeout=300, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    
-                print(F.GREEN + f"✓ Removed legacy package: {package}" + R)
-                removed_count += 1
-            except subprocess.CalledProcessError:
-                print(F.YELLOW + f"✗ Could not remove {package} (might be needed by other packages)" + R)
-            except Exception as e:
-                print(F.YELLOW + f"✗ Error removing {package}: {e}" + R)
-        
-    return removed_count
 
 # Configuration for multiple update sources
 UPDATE_SOURCES = [
@@ -548,7 +529,15 @@ def startup_cleanup():
     if os.path.exists(txt_path) and safe_remove(txt_path):
         print(f"Removed file: {txt_path}")
     
-    cleanup_legacy_packages()
+    # Check for legacy packages to remove on startup
+    legacy_packages = []
+    for package in LEGACY_PACKAGES_TO_REMOVE:
+        if is_package_installed(package):
+            legacy_packages.append(package.lower())
+    
+    if legacy_packages:
+        print(F.YELLOW + "Found legacy packages on startup..." + R)
+        uninstall_packages(legacy_packages, " (legacy cleanup)")
 
 startup_cleanup()
 
@@ -770,7 +759,7 @@ if __name__ == "__main__":
                                 # Copy new requirements.txt to working directory before cleanup
                                 try:
                                     if os.path.exists("requirements.txt"):
-                                        os.remove("requirements.txt")
+                                        safe_remove("requirements.txt", is_dir=False)
                                     shutil.copy2(requirements_path, "requirements.txt")
                                     print(F.GREEN + "Updated requirements.txt" + R)
                                 except Exception as e:
@@ -824,7 +813,7 @@ if __name__ == "__main__":
                                         try:
                                             # Remove old backup if exists
                                             if os.path.exists(backup_path):
-                                                os.remove(backup_path)
+                                                safe_remove(backup_path, is_dir=False)
                                             # Copy current file to backup
                                             shutil.copy2(dst_path, backup_path)
                                         except Exception as e:
