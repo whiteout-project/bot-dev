@@ -229,6 +229,28 @@ LEGACY_PACKAGES_TO_REMOVE = [
     "opencv-python-headless",
 ]
 
+def has_obsolete_requirements():
+    """
+    Check if requirements.txt contains obsolete packages from older versions.
+    Required to fix bug with v1.2.0 upgrade logic that deleted new requirements.txt.
+    """
+    if not os.path.exists("requirements.txt"):
+        return False
+    
+    try:
+        with open("requirements.txt", "r") as f:
+            content = f.read().lower()
+            
+        for package in LEGACY_PACKAGES_TO_REMOVE:
+            if package.lower() in content:
+                print(f"Found obsolete package in requirements.txt: {package}")
+                return True
+        
+        return False
+    except Exception as e:
+        print(f"Error checking requirements.txt: {e}")
+        return False
+
 def is_package_installed(package_name):
     """Check if a package is installed"""
     try:
@@ -468,11 +490,18 @@ def setup_dependencies(beta_mode=False):
     """Main function to set up all dependencies."""
     print("\nChecking dependencies...")
     
+    if has_obsolete_requirements():
+        print("! Warning: requirements.txt contains obsolete packages from older version")
+        print("! Removing outdated requirements.txt and downloading fresh copy...")
+
+        if not safe_remove("requirements.txt", is_dir=False):
+            print("! Error removing obsolete requirements.txt")
+
     if not os.path.exists("requirements.txt"):
         print("! Warning: requirements.txt not found")
         if not download_requirements_from_release(beta_mode=beta_mode):
             print("✗ Failed to download requirements.txt")
-            print("Please download the complete bot package from: https://github.com/whiteout-project/bot/releases")
+            print("• Please download the complete bot package from: https://github.com/whiteout-project/bot/releases")
             return False
     
     if not check_and_install_requirements():
