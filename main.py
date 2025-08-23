@@ -249,7 +249,6 @@ def has_obsolete_requirements():
             
         for package in LEGACY_PACKAGES_TO_REMOVE:
             if package.lower() in content:
-                print(f"Found obsolete package in requirements.txt: {package}")
                 return True
         
         return False
@@ -365,7 +364,7 @@ def download_requirements_from_release(beta_mode=False):
     if os.path.exists("requirements.txt"):
         return True
     
-    print("requirements.txt not found. Downloading from latest release...")
+    print("Downloading requirements.txt from latest release...")
     
     # Get latest release info to find the tag
     release_info = get_latest_release_info(beta_mode=beta_mode)
@@ -471,15 +470,18 @@ def setup_dependencies(beta_mode=False):
     """Main function to set up all dependencies."""
     print("\nChecking dependencies...")
     
+    removed_obsolete = False
     if has_obsolete_requirements():
         print("! Warning: requirements.txt contains obsolete packages from older version")
         print("! Removing outdated requirements.txt and downloading fresh copy...")
+        removed_obsolete = True
 
         if not safe_remove("requirements.txt", is_dir=False):
             print("! Error removing obsolete requirements.txt")
 
     if not os.path.exists("requirements.txt"):
-        print("! Warning: requirements.txt not found")
+        if not removed_obsolete:
+            print("! Warning: requirements.txt not found")
         if not download_requirements_from_release(beta_mode=beta_mode):
             print("✗ Failed to download requirements.txt")
             print("• Please download the complete bot package from: https://github.com/whiteout-project/bot/releases")
